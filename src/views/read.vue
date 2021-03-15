@@ -22,7 +22,7 @@
 				v-on:panright="panright($event)" 
 				v-on:panend="panend($event)"
 				class="read-content" 
-				v-if="pagingPattern==1 || pagingPattern==2 || pagingPattern==3"
+				v-if="pagingPattern==1 || pagingPattern==2 || pagingPattern==3 || pagingPattern==4"
 			>
 				<p class="book-title1" style="padding: 15px 20px;">{{bookContent.title}}</p>
 				<div class="read-article" style="padding: 0 20px;">
@@ -49,6 +49,7 @@
 			@openDownload="openDownload"
 			@openMenu="openMenu"></reader-tool-page-bottom>
 		<reader-setting v-model="showSetting"></reader-setting>
+		<readerDownload v-model="showDownload"></readerDownload>
 	</div>
 </template>
 
@@ -59,6 +60,7 @@ import bookChapter from '@/components/book-chapter.vue';
 import readerToolPageTop from '@/components/reader-tool-page-top.vue';
 import readerToolPageBottom from '@/components/reader-tool-page-bottom.vue';
 import readerSetting from '@/components/reader-setting.vue';
+import readerDownload from '@/components/reader-download.vue'
 import { _nromalBook } from '@/utils/bookUtil.js';
 import { getBookContent } from '@/api';
 import { Toast, Notify } from 'vant';
@@ -66,7 +68,7 @@ export default {
 	mixins: [ bookMixin ],
 	
 	components: {
-		bookChapter, readerToolPageTop, readerToolPageBottom, readerSetting
+		bookChapter, readerToolPageTop, readerToolPageBottom, readerSetting, readerDownload
 	},
 	
 	data () {
@@ -85,11 +87,12 @@ export default {
 			showTool: false, // 是否显示工具栏
 			showMenu: false, // 是否显示目录
 			showSetting: false, // 是否显示设置页
+			showDownload: false, // 是否显示下载页面
 		}
 	},
 	
 	computed: {
-		...mapGetters([ 'currentBook', 'setting' ]),
+		...mapGetters([ 'setting' ]),
 		
 		pagingPattern () { // 翻页模式 0:整页   1:平滑   2:点滑   3:无   4:仿真
 			return this.setting.turnPageMode
@@ -102,10 +105,11 @@ export default {
 	
 	watch: {
 		currentPaging() {
-			this.setBook({
-				bookId: this.$route.query.bookId,
+			let nowBoook = JSON.parse(JSON.stringify(this.currentBook));
+			Object.assign(nowBoook, {
 				currentPage: this.currentPaging
-			}, true);
+			})
+			this.setBook(nowBoook);
 		},
 		
 		currentIndex() { // 章节发生变化就获取章节正文
@@ -118,23 +122,18 @@ export default {
 				this.bookContent = _nromalBook(thisChapter.title, thisChapter.content);
 			} else { // 当前章节未缓存
 				let currentChapterId = this.currentBook.chapters[this.currentIndex].chapterId;
-				this.getChapterContent(this.$route.query.bookId, currentChapterId)
+				this.getChapterContent(this.$route.query.bookId, currentChapterId, this.currentBook.source)
 			}
-			if (this.currentBook.isOnShelf) { // 本书已在书架，则保存章节列表（更新书架）
-				this.setBook({
-					bookId: this.$route.query.bookId,
-					currentIndex: this.currentIndex,
-				}, true);
-			}
-			this.setNowBook({
-				bookId: this.$route.query.bookId,
-				currentIndex: this.currentIndex,
-			});
+			let nowBoook = JSON.parse(JSON.stringify(this.currentBook))
+			Object.assign(nowBoook, {
+				currentIndex: this.currentIndex
+			})
+			this.setBook(nowBoook);
 		},
 		
 		bookContent () {
 			this.$refs.wrapper.scrollTop = 0
-			if (this.pagingPattern == 1 || this.pagingPattern == 2 || this.pagingPattern == 3) {
+			if (this.pagingPattern == 1 || this.pagingPattern == 2 || this.pagingPattern == 3 || this.pagingPattern==4) {
 				this.$nextTick(function () {
 				  let scrollW = this.$refs.bookInner.scrollWidth
 				  let clientW = this.$refs.bookInner.clientWidth
@@ -142,10 +141,10 @@ export default {
 					if (this.isPrevChapter) { // 上一章，默认最后一页
 						this.isPrevChapter = false
 						this.currentPaging = this.resultPaging;
-						this.setTransForm('(-(this.currentPaging - 1) * (this.clWidth - 20))', '0');
+						this.setTransForm((-(this.currentPaging - 1) * (this.clWidth - 20)), '0');
 					} else {
 						this.currentPaging = 1
-						this.setTransForm('0px', '0');
+						this.setTransForm('0', '0');
 					}
 				})
 			}
@@ -153,20 +152,16 @@ export default {
 	},
 	
 	methods: {
-		getChapterContent(bookId, chapterId) { // 获取章节正文
+		getChapterContent(bookId, chapterId, source) { // 获取章节正文
 			getBookContent({
 				bookId,
-				chapterId
+				chapterId,
+				searchType: source == '笔趣阁' ? '0' : '1'
 			}).then(res => {
 				if (res.status == 200) {
 					let nowBook = JSON.parse(JSON.stringify(this.currentBook));
 					nowBook.chapters[this.currentIndex].content = res.data.cpContent;
-					this.setNowBook(nowBook); // 更新当前书籍
-					if (this.currentBook.isOnShelf) { // 本书已在书架，则保存章节列表（更新书架）
-						let thisBook = this.bookList.find(item => item.bookId == this.currentBook.bookId);
-						thisBook.chapters[this.currentIndex].content = res.data.cpContent;
-						this.setBook(thisBook, true); // 更新缓存列表
-					}
+					this.setBook(nowBook); // 更新缓存列表
 					this.bookContent = _nromalBook(res.data.title, res.data.cpContent);
 				} else {
 					Notify(res.msg);
@@ -185,7 +180,7 @@ export default {
 				Toast('第一章')
 			} else {
 				this.currentIndex--;
-				if (this.pagingPattern == 1 || this.pagingPattern == 2 || this.pagingPattern == 3) {
+				if (this.pagingPattern == 1 || this.pagingPattern == 2 || this.pagingPattern == 3 || this.pagingPattern == 4) {
 					let thisChapter = this.currentBook.chapters[this.currentIndex];
 					if (thisChapter.content) { // 当前章节已缓存
 						this.isPrevChapter = true;
@@ -224,14 +219,13 @@ export default {
 				this.showTool = !this.showTool;
 				return;
 			}
-			
-			if (this.pagingPattern == 2 || this.pagingPattern == 3) {  // 点滑/无
+			if (this.pagingPattern == 2 || this.pagingPattern == 3 || this.pagingPattern == 4) {  // 点滑/无/点翻
 				if (e.pageX <= this.clWidth / 2) { // 用户点击左边1/2
 					if (this.currentPaging != 1) { // 不是本章第一页
 						this.currentPaging--;
 						if (this.pagingPattern == 2) {
 							this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0.5s');
-						} else if (this.pagingPattern == 3) {
+						} else if (this.pagingPattern == 3 || this.pagingPattern == 4) {
 							this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0');
 						}
 					} else {
@@ -244,8 +238,10 @@ export default {
 						this.currentPaging++
 						if (this.pagingPattern == 2) {
 							this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0.5s');
-						} else if (this.pagingPattern == 3) {
-							this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0');
+						} else if (this.pagingPattern == 3 || this.pagingPattern == 4) {
+							this.styleObject = {
+								transform: 'translateX(' + ((1 - this.currentPaging) * (this.clWidth - 20)) + 'px' + ')'
+							}
 						}
 					}
 				}
@@ -260,7 +256,7 @@ export default {
 		},
 		
 		panleft (e) { // 左滑
-			if (this.pagingPattern === 1) {
+			if (this.pagingPattern === 1 || this.pagingPattern == 4) {
 				if (this.showSetting) {
 					this.showSetting = !this.showSetting;
 					return;
@@ -270,7 +266,7 @@ export default {
 					return;
 				}
 				this.offsetX = e.deltaX
-				if (this.resultPaging > this.currentPaging) { // 不是最后一页
+				if (this.resultPaging > this.currentPaging && this.pagingPattern === 1) { // 不是最后一页
 					if (Math.abs(this.offsetX) < this.clWidth) {
 						this.setTransForm((this.offsetX + (1 - this.currentPaging) * (this.clWidth - 20)), '0');
 					}
@@ -279,7 +275,8 @@ export default {
 		},
 		
 		panend (e) { // 滑动结束
-			if (this.pagingPattern === 1) {
+			if (this.pagingPattern === 1 || this.pagingPattern === 4) {
+				let times = this.pagingPattern === 4 ? '0' : '0.5s';
 				if (this.offsetX < 0) { // 左滑
 					if (this.resultPaging == this.currentPaging) { // 最后一页
 						this.nextChapter()
@@ -287,14 +284,14 @@ export default {
 						if (Math.abs(this.offsetX) > this.clWidth/20) { // 左滑距离小于六分之一，则不翻页
 							this.currentPaging++
 						}
-						this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0.5s');
+						this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), times);
 					}
 				} else { // 右滑
 					if (this.currentPaging != 1) { // 不是第一页
 						if (Math.abs(this.offsetX) > this.clWidth/20) { // 右滑距离小于六分之一，则翻页
 							this.currentPaging--
 						}
-						this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), '0.5s');
+						this.setTransForm(((1 - this.currentPaging) * (this.clWidth - 20)), times);
 					} else {
 						this.prevChapter()
 					}
@@ -312,10 +309,10 @@ export default {
 				this.showTool = !this.showTool;
 				return;
 			}
-			if (this.pagingPattern == 1) {
+			if (this.pagingPattern == 1 || this.pagingPattern == 4) {
 				if (this.currentPaging > 1) {
 					this.offsetX = e.deltaX
-					if (Math.abs(this.offsetX) < this.clWidth) {
+					if (Math.abs(this.offsetX) < this.clWidth && this.pagingPattern === 1) {
 						this.setTransForm((this.offsetX - (this.currentPaging - 1) * (this.clWidth - 20)), '0');
 					}
 				}
@@ -329,20 +326,12 @@ export default {
 		
 		openDownload () { // 打开下载页面
 			this.showTool = false;
+			this.showDownload = true;
 		},
 		
 		openMenu () { // 打开目录
 			this.showTool = false;
 			this.showMenu = true;
-		}
-	},
-	
-	beforeRouteLeave (to, from, next) {
-		if (!this.currentBook.isOnShelf) { // 还没有加入书架，则离开页面时删除缓存书籍
-			this.setNowBook('delete');
-			next()
-		} else {
-			next()
 		}
 	}
 }

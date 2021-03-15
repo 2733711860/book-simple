@@ -8,8 +8,7 @@
 				<div class="detail-top-content">
 					<div class="book-title">{{bookDetail ? bookDetail.bookName : ''}}</div>
 					<div class="book-author">{{bookDetail ? bookDetail.bookAuthor : ''}}</div>
-					<div class="book-type">{{bookDetail ? bookDetail.bookType : ''}}</div>
-					<div class="book-type">{{bookDetail ? bookDetail.isSerial : ''}}</div>
+					<div class="book-type">{{bookDetail ? bookDetail.updatedTime : ''}}</div>
 				</div>
 			</div>
 			
@@ -87,31 +86,29 @@ export default {
 	},
 	
 	computed: {
-		...mapGetters([ 'bookList' ]),
-		
 		isOnShelf() { // 是否放入书架
-			let nowBook = this.bookList.find(item => item.bookId == this.$route.query.bookId);
-			if (nowBook) {
-				this.setNowBook({
-					isOnShelf: nowBook ? true : false
-				});
-			}
-			return nowBook ? true : false;
+			return this.currentBook && this.currentBook.isOnShelf ? true : false;
 		}
 	},
 	
-	mounted() {
-		this.getDetail();
+	beforeRouteEnter(to, from, next) {
+		next(vm => { // vm为vue的实例, 代替this
+			if (from && from.name == 'read') { // 从阅读页回来，则不调用接口
+				vm.bookDetail = vm.currentBook;
+			} else {
+				vm.getDetail();
+			}
+		});
 	},
 	
 	methods: {
 		getDetail() { // 获取书籍详情
 			getBookDetail({
-				bookId: this.$route.query.bookId
+				bookId: this.$route.query.bookId,
+				searchType: this.$route.query.source == '笔趣阁' ? '0' : '1'
 			}).then(res => {
 				if (res.status == 200) {
 					this.bookDetail = res.data;
-					this.setNowBook(this.bookDetail);
 				} else {
 					Notify(res.msg);
 				}
@@ -134,53 +131,43 @@ export default {
 		},
 		
 		shelfFunc () { // 加入书架、移除书架
+			let type = this.$route.query.source == '笔趣阁' ? 'biquge' : 'xinbiquge';
 			Object.assign(this.bookDetail, {
-				isOnShelf: !this.isOnShelf
+				isOnShelf: !this.isOnShelf,
+				bookOnlyId: `${type}_${this.$route.query.bookId}`
 			})
-			this.setBook(this.bookDetail, !this.isOnShelf);
-			this.setNowBook({
-				isOnShelf: this.isOnShelf
-			});
+			this.setBook(this.bookDetail);
 			this.getChapter(this.$route.query.bookId);
 		},
 		
 		goTxt() { // 开始阅读
-			if (this.currentBook && !this.currentBook.chapters) { // 没有章节信息
-				this.getChapter(this.$route.query.bookId, () => {
-					this.$router.push({
-						path: '/read',
-						query: {
-							bookId: this.$route.query.bookId
-						}
-					})
-				});
-			} else {
+			this.getChapter(this.$route.query.bookId, () => {
 				this.$router.push({
 					path: '/read',
 					query: {
 						bookId: this.$route.query.bookId
 					}
 				})
-			}
+			});
 		},
 		
 		getChapter(bookId, callback) { // 获取书籍章节
+			if (this.currentBook && this.currentBook.chapters && this.currentBook.chapters.length > 0) { // 缓存列表里本书章节已经缓存过，则不用再调接口
+				if (callback) {
+					callback();
+				}
+				return;
+			}
 			getBookChapter({
-				bookId
+				bookId,
+				searchType: this.$route.query.source == '笔趣阁' ? '0' : '1'
 			}).then(res => {
 				if (res.status == 200) {
-					if (this.currentBook.isOnShelf) { // 本书已在书架，则保存章节列表（更新书架）
-						this.setBook({
-							bookId,
-							currentIndex: 0,
-							chapters: res.data
-						}, true);
-					}
-					this.setNowBook({
-						bookId,
-						currentIndex: 0,
-						chapters: res.data
-					});
+					let type = this.$route.query.source == '笔趣阁' ? 'biquge' : 'xinbiquge';
+					this.bookDetail.bookOnlyId = `${type}_${this.$route.query.bookId}`;
+					this.bookDetail.chapters = res.data;
+					this.bookDetail.currentIndex = 0;
+					this.setBook(this.bookDetail);
 					if (callback) {
 						callback();
 					}
@@ -194,12 +181,10 @@ export default {
 	},
 	
 	beforeRouteLeave (to, from, next) {
-		if (!this.currentBook.isOnShelf && to.name != 'read') { // 还没有加入书架，则离开页面时删除缓存书籍
-			this.setNowBook('delete');
-			next()
-		} else {
-			next()
+		if (this.currentBook && !this.currentBook.isOnShelf && to.name != 'read') {
+			this.cancelBook(this.currentBook);
 		}
+		next()
 	}
 }
 </script>

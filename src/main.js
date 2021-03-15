@@ -14,6 +14,20 @@ VueTouch.config.swipe = {
   threshold:50  // 设置左右滑动的距离
 }
 
+
+// 自定义指令
+Vue.use((Vue) => {
+  ((requireContext) => {
+    const arr = requireContext.keys().map(requireContext);
+    (arr || []).forEach((directive) => {
+      directive = directive.__esModule && directive.default ? directive.default : directive;
+      Object.keys(directive).forEach((key) => {
+        Vue.directive(key, directive[key]);
+      });
+    });
+  })(require.context('@/directive/', false, /^\.\/.*\.js$/));
+});
+
 new Vue({
   store,
   router,

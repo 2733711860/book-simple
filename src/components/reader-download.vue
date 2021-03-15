@@ -1,7 +1,7 @@
 <template>
 	<div :class="['tool-page-download', showDownload ? 'show' : '']">
 		<div class="download-div">
-			<div class="title">{{thisBook.bookName}}</div>
+			<div class="title">{{currentBook.bookName}}</div>
 			<div class="item"
 				v-for="(item, index) in downloadChooseList" 
 				:key="index + 'down'"
@@ -13,17 +13,19 @@
 </template>
 
 <script>
-import transferUtil from '../../../utils/middle-transfer.js'
+import bookMixin from '@/minxin/book.js';
+import transferUtil from '@/utils/middle-transfer.js';
 export default {
+	mixins: [ bookMixin ],
+	
 	data () {
 		return {
 			showDownload: this.value,
 			downloadChooseList: [
-				{ type: '1', text: '缓存后面50章' }, { type: '2', text: '缓存剩余章节' },
+				{ type: '1', text: '缓存后面10章' }, { type: '2', text: '缓存剩余章节' },
 				{ type: '3', text: '缓存全本' }, { type: '4', text: '查看缓存管理' }
 			],
-			startIndex: -1, // 开始缓存的索引
-			endIndex: -1, // 结束缓存的索引
+			bookId: this.$route.query.bookId
 		}
 	},
 	
@@ -40,42 +42,34 @@ export default {
 		}
 	},
 	
-	computed: {
-		thisBook () { // 当前书
-			let nowBook = this.$store.getters.cacheBooks.find(item => item.bookId == this.$route.query.bookId)
-			return nowBook ? nowBook : {}
-		}
-	},
-	
 	methods: {
 		closeDownload () { // 关闭下载框
 			this.showDownload = false
 		},
 		
 		downloadThis (item) { // 下载
-			this.closeDownload()
+			this.closeDownload();
+			if (!this.currentBook.isOnShelf) {
+				let nowBoook = JSON.parse(JSON.stringify(this.currentBook));
+				Object.assign(nowBoook, {
+					isOnShelf: true
+				})
+				this.setBook(nowBoook);
+			}
 			if (item.type == '4') {
-				if (this.thisBook.isOnShelf == '0') {
-					this.$store.dispatch('inOutShelf', { // 只要选择进入下载页面，则加入书架
-						bookId: this.$route.query.bookId
-					})
-				}
 				this.$router.push({
 					path: '/book/download'
 				})
 			} else {
-				let endIndex = item.type == '1' ? (((this.thisBook.currentChapterIndex + 50) > (this.thisBook.chapters.length - 1)) ? (this.thisBook.chapters.length - 1) : (this.thisBook.currentChapterIndex + 50)) : (this.thisBook.chapters.length - 1)
-				let startIndex = item.type == '3' ? 0 : this.thisBook.currentChapterIndex
-				this.$store.dispatch('setCacheBooks', { // 保存缓存进度
-					bookId: this.$route.query.bookId,
-					cacheStartOrigin: startIndex,
-					cacheEnd: endIndex,
-					cacheStart: startIndex,
-					cacheState: '1'
-				})
-				transferUtil.$emit('testDemo', startIndex, endIndex, this.thisBook)
+				let endIndex = item.type == '1' ? 
+					(((this.currentBook.currentIndex + 10) > (this.currentBook.chapters.length - 1)) ? 
+						(this.currentBook.chapters.length - 1) : 
+						(this.currentBook.currentIndex + 10)) : 
+					(this.currentBook.chapters.length - 1);
+				let startIndex = item.type == '3' ? 0 : this.currentBook.currentIndex;
+				transferUtil.$emit('testDemo', startIndex, endIndex, this.currentBook);
 			}
-		},
+		}
 	}
 }
 </script>

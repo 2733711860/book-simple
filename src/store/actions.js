@@ -1,36 +1,32 @@
 import * as types from './mutation-types'
+import { getBase64 } from '@/utils/bookUtil.js'
 
-// 添加更新书籍列表
-export const setBookList = function({ state, commit }, bookObj) {
+// 添加更新书籍列表(只有放入书架，或者到阅读页的书籍才会进入这个列表)
+export const setBookList = async function({ state, commit }, bookObj) {
 	let originBook = {
+		"bookOnlyId": "",
 		"bookId": "",
 		"bookName": "",
 		"bookAuthor": "",
-		"bookType": "",
-		"bookRate": '',
 		"bookDesc": "",
-		"latelyFollower": '',
-		"retentionRatio": '',
 		"bookImg": "",
-		"wordCount": '',
-		"lastChapter": '',
-		"chaptersCount": '',
-		"isSerial": "",
 		"updatedTime": "",
-		"detailUrl": "",
-		"commentNum": '',
-		"source": "",
 	  "currentIndex": -1,
+		"isOnShelf": false, // 是否放入书架
 		"currentPage": 1,
 	  "chapters": []
 	}
+	// bookObj.bookImg = await getBase64(bookObj.bookImg);
 	let bookList = JSON.parse(JSON.stringify(state.bookList)); // 拷贝一份书籍列表
-	let thisOne = bookList.find(item => item.bookId == bookObj.bookId);
+	let thisOne = bookList.find(item => item.bookOnlyId == bookObj.bookOnlyId);
 	if (thisOne) { // 已有则更新
-		let thisIndex = bookList.findIndex(item => item.bookId == bookObj.bookId);
+		let thisIndex = bookList.findIndex(item => item.bookOnlyId == bookObj.bookOnlyId);
 		Object.assign(thisOne, bookObj);
 		bookList.splice(thisIndex, 1, thisOne);
 	} else { // 没有则添加
+		if (!bookObj.isOnShelf) { // 添加不是书架的书，则先删除其他未入书架的书
+			bookList = bookList.filter(item => item.isOnShelf);
+		}
 		Object.assign(originBook, bookObj);
 		bookList.push(originBook);
 	}
@@ -41,23 +37,12 @@ export const setBookList = function({ state, commit }, bookObj) {
 export const deleteBook = function({ state, commit }, deleteList) {
 	let bookList = JSON.parse(JSON.stringify(state.bookList)); // 拷贝一份书籍列表
 	deleteList.forEach((deleteItem, deleteIndex) => {
-		let thisIndex = bookList.findIndex(item => item.bookId == deleteItem.bookId);
+		let thisIndex = bookList.findIndex(item => item.bookOnlyId == deleteItem.bookOnlyId);
 		if (thisIndex != -1) { // 已有则删除
 			bookList.splice(thisIndex, 1);
 		}
 	})
   commit(types.SET_BOOKLIST, bookList)
-}
-
-// 当前书籍
-export const setCurrentBook = function({ state, commit }, bookObj) {
-	if (bookObj == 'delete') {
-		commit(types.SET_CURRENTBOOK, {})
-	} else {
-		let currentBook = JSON.parse(JSON.stringify(state.currentBook)); // 拷贝一份当前书籍
-		Object.assign(currentBook, bookObj);
-		commit(types.SET_CURRENTBOOK, currentBook)
-	}
 }
 
 // 设置

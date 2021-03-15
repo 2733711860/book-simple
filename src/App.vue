@@ -9,10 +9,59 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapActions } from 'vuex'
+import transferUtil from '@/utils/middle-transfer.js';
+import { Toast } from 'vant';
+import { getBookContent } from '@/api';
+import bookMixin from '@/minxin/book.js';
 export default {
   name: "app",
+	
+	mixins: [ bookMixin ],
+	
+	mounted() {
+		transferUtil.$on('testDemo', (startIndex, endIndex, nowBook) => {
+			this.downLoadChapter(startIndex, endIndex, nowBook);
+		})
+	},
+	
   methods: {
+		downLoadChapter(startIndex, endIndex, nowBook) {
+			if (startIndex < endIndex) { // 没有缓存完成
+				let isCache = nowBook.chapters[startIndex].content ? true : false; // 本章是否缓存过
+				if (!isCache) { // 没有缓存过
+					let chapterId = nowBook.chapters[startIndex].chapterId;
+					let bookId = nowBook.bookId;
+					this.downLoadApi(bookId, chapterId, nowBook.source).then(res => {
+						if (res.status == 200) {
+							let thisBook = this.bookList.find(item => item.bookId == bookId);
+							thisBook.chapters[startIndex].content = res.data.cpContent;
+							this.setBook(thisBook); // 更新缓存列表
+						}
+						startIndex++;
+						this.downLoadChapter(startIndex, endIndex, nowBook);
+					});
+				} else {
+					startIndex++;
+					this.downLoadChapter(startIndex, endIndex, nowBook);
+				}
+			} else { // 缓存完成
+				Toast(`${nowBook.bookName} 缓存完成`);
+			}
+		},
+		
+		downLoadApi(bookId, chapterId, source) {
+			return new Promise((resolve, reject) => {
+				getBookContent({
+					bookId,
+					chapterId,
+					searchType: source == '笔趣阁' ? '0' : '1'
+				}).then(res => {
+					resolve(res);
+				}).catch(err => {
+					reject(err);
+				})
+			})
+		}
   }
 }
 </script>

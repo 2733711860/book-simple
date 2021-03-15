@@ -164,3 +164,35 @@ export const femaleRankTypeObj = {
 	'GR6': '完结榜',
 	'GR7': '字数榜'
 }
+
+// 传入图片路径，返回base64
+export function getBase64(imgUrl) {
+	return new Promise((resolve, reject) => {
+		window.URL = window.URL || window.webkitURL;
+		var xhr = new XMLHttpRequest();
+		xhr.open("get", imgUrl, true);
+		// 至关重要
+		xhr.responseType = "blob";
+		xhr.onload = function () {
+		  if (this.status == 200) {
+		    //得到一个blob对象
+		    var blob = this.response;
+		    // 至关重要
+		    let oFileReader = new FileReader();
+		    oFileReader.onloadend = function (e) {
+		      // 此处拿到的已经是 base64的图片了
+		      let base64 = e.target.result;
+		    };
+		    oFileReader.readAsDataURL(blob);
+		    let src = window.URL.createObjectURL(blob);
+				resolve(src)
+		  } else {
+				console.log(11111)
+			}
+		}
+		xhr.send();
+		xhr.onerror = (e) => {
+			reject(e)
+		}
+	})
+}

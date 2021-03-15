@@ -1,6 +1,7 @@
 <template>
 	<div class="book-card" @click="goRead">
-		<img :src="bookObj.bookImg" />
+		<i class="iconfont iconwancheng" :style="{color: (bookObj.isSelect ? '#ff0000' : '#a1a1a1')}" v-if="showSelect"></i>
+		<img :src="bookObj.bookImg" :onerror="defaultImg" />
 		<div class="card-right">
 			<div class="book-name">{{bookObj.bookName}}</div>
 			<div class="new-chapter">
@@ -16,6 +17,7 @@ import moment from 'moment';
 export default{
 	data() {
 		return {
+			defaultImg: 'this.src="'+ require('@/assets/img/1.jpg') +'"' // 图片加载错误时的默认图片
 		}
 	},
 	
@@ -34,6 +36,10 @@ export default{
 		bookObj: {
 			type: [Object, String],
 			default: () => {}
+		},
+		showSelect: {
+			type: Boolean,
+			default: false
 		}
 	},
 	
@@ -49,11 +55,16 @@ export default{
 	.book-card{
 		display: flex;
 		padding: 10px 15px;
+		.iconwancheng{
+			margin-right: 15px;
+			margin: auto 15px auto 0;
+		}
 		img{
 			width: 50px;
 		}
 		.card-right{
 			flex: 1;
+			height: auto;
 			margin-left: 10px;
 			display: flex;
 			flex-direction: column;

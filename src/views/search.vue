@@ -19,26 +19,23 @@
 				v-for="(item, index) in resultList"
 				:key="index"
 			  v-model="item.bookName"
-			  :label="`[${item.bookType}]`"
+			  :label="`[${item.bookType ? item.bookType : item.bookAuthor}]`"
 				readonly
 			  input-align="right"
 				@click="goDetail(item)"
 			/>
-			
-			<div class="search-tips" v-if="resultList && !isDeepResult">没有想要的结果？试试<span @click="deepSearch">深度搜索</span></div>
 		</div>
 	</div>
 </template>
 
 <script>
-import { getBiqugeSearch, getSearch } from '@/api';
+import { getSearch } from '@/api';
 import { Notify } from 'vant';
 export default {
 	data() {
 		return {
 			keyWord: '', // 检索关键字
 			resultList: '', // 搜索结果列表
-			isDeepResult: false // 是否是深度搜索结果
 		}
 	},
 	methods: {
@@ -48,29 +45,10 @@ export default {
 				return;
 			}
 			getSearch({
-				keyWord: this.keyWord
+				keyWord: this.keyWord,
+				searchType: '1' // 0：笔趣阁；1：新笔趣阁
 			}).then(res => {
 				if (res.status == 200) {
-					this.isDeepResult = false;
-					this.resultList = res.data;
-				} else {
-					Notify(res.msg);
-				}
-			}).catch(() => {
-				Notify('网络异常，请稍后再试');
-			})
-		},
-		
-		deepSearch() { // 深度搜索
-			if (!this.keyWord) {
-				Notify('请输入检索关键字');
-				return;
-			}
-			getBiqugeSearch({
-				keyWord: this.keyWord
-			}).then(res => {
-				if (res.status == 200) {
-					this.isDeepResult = true;
 					this.resultList = res.data;
 				} else {
 					Notify(res.msg);
@@ -84,7 +62,8 @@ export default {
 			this.$router.push({
 				path: '/detail',
 				query: {
-					bookId: bookMsg.bookId
+					bookId: bookMsg.bookId,
+					source: bookMsg.source
 				}
 			})
 		},

@@ -22,7 +22,8 @@ import {
   Search,
   Tag,
   Lazyload,
-	Notify
+	Notify,
+	Checkbox
 } from "vant";
 
 Vue.use(Icon);
@@ -48,3 +49,4 @@ Vue.use(Search);
 Vue.use(Tag);
 Vue.use(Lazyload);
 Vue.use(Notify);
+Vue.use(Checkbox);

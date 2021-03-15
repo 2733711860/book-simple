@@ -21,9 +21,7 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapActions } from 'vuex'
 import bookMixin from '@/minxin/book.js';
-import { getBookChapter } from '@/api';
 import { Notify } from 'vant';
 export default {
 	mixins: [ bookMixin ],

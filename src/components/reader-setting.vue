@@ -72,7 +72,7 @@ export default {
 			],
 			pageMode: [
 				{ text: '整页', value: 0}, { text: '平移', value: 1},
-				{ text: '点移', value: 2}, { text: '仿真', value: 4}, { text: '默认', value: 3}
+				{ text: '点移', value: 2}, { text: '平翻', value: 4}, { text: '默认', value: 3}
 			],
 			bgColorList: ['rgba(250, 228, 190, .8)', 'rgba(183, 198, 191, 1)', 'rgba(202, 201, 206, 1)', 'rgba(236, 216, 179, 1)', 'rgba(245, 228, 228, 1)',
 				'rgba(222, 210, 188, 1)', 'rgba(238, 230, 221, 1)', 'rgba(215, 201, 188, 1)', 'rgba(141, 206, 141, 1.0)',
@@ -127,10 +127,10 @@ export default {
 		},
 		
 		changeMode (item) { // 切换翻页模式
-		  if (item.value == '4') {
-				Toast('敬请期待！')
-				return
-			}
+		 //  if (item.value == '4') {
+			// 	Toast('敬请期待！')
+			// 	return
+			// }
 			this.setSetting({
 				turnPageMode: item.value
 			})

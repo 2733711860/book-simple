@@ -7,22 +7,28 @@ export default {
 	},
 	
 	computed: {
-		...mapGetters([ 'bookList', 'currentBook' ])
+		...mapGetters([ 'bookList' ]),
+		
+		currentBook() {
+			let type = this.$route.query.source == '笔趣阁' ? 'biquge' : 'xinbiquge';
+			let thisBook = this.bookList.find(item => item.bookOnlyId == `${type}_${this.$route.query.bookId}`);
+			return thisBook;
+		}
 	},
 	
   methods: {
-    setBook(bookObj, flag) { // 保存更新书籍基本信息
-			if (flag) { // true：保存添加
-				this.setBookList(bookObj);
-			} else { // false：删除
-				this.deleteBook([bookObj]);
-			}
+    setBook(bookObj) { // 保存更新书籍基本信息
+			this.setBookList(bookObj);
     },
 		
-		setNowBook(book) { // 保存当前书籍
-			this.setCurrentBook(book);
+		cancelBook(bookObj) { // 删除书籍
+			if (bookObj instanceof Array) { // 删除多本书
+				this.deleteBook(bookObj);
+			} else { // 删除单本书
+				this.deleteBook([bookObj]);
+			}
 		},
 		
-		...mapActions(['setBookList', 'deleteBook', 'setCurrentBook'])
+		...mapActions(['setBookList', 'deleteBook'])
   }
 }
